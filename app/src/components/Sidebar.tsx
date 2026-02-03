@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Users,
   Activity,
+  BookOpen,
 } from "lucide-react";
 import { agents } from "@/lib/agents";
 
@@ -54,6 +55,12 @@ export function Sidebar() {
           icon={<Users size={18} />}
           label="Clients"
           active={pathname === "/clients"}
+        />
+        <SidebarLink
+          href="/knowledge"
+          icon={<BookOpen size={18} />}
+          label="Knowledge Hub"
+          active={pathname === "/knowledge"}
         />
 
         <div className="text-xs uppercase tracking-wider text-white/30 px-3 pt-5 pb-2">

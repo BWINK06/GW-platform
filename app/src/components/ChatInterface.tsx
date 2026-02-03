@@ -5,6 +5,7 @@ import { Send, Loader2, Trash2 } from "lucide-react";
 import { ClientSelector } from "./ClientSelector";
 import { Client } from "@/lib/clients";
 import { Agent } from "@/lib/agents";
+import { getRelevantKnowledge } from "@/lib/knowledge";
 
 interface Message {
   role: "user" | "assistant";
@@ -90,6 +91,7 @@ export function ChatInterface({ agent }: { agent: Agent }) {
           messages: withUser,
           agentId: agent.id,
           clientId: selectedClient?.id || null,
+          knowledge: getRelevantKnowledge(agent.id, selectedClient?.id || null),
         }),
       });
 

@@ -7,7 +7,7 @@ const anthropic = new Anthropic();
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, agentId, clientId } = await req.json();
+    const { messages, agentId, clientId, knowledge } = await req.json();
 
     const agent = getAgent(agentId);
     if (!agent) {
@@ -35,6 +35,16 @@ ${client.contacts.map((c) => `- ${c.name} (${c.role})`).join("\n")}
 
 Use this client context to personalize all of your responses. Reference the client by name, tailor recommendations to their industry and goals, and consider their budget when making suggestions.`;
       }
+    }
+
+    // Inject knowledge hub entries
+    if (knowledge && Array.isArray(knowledge) && knowledge.length > 0) {
+      systemPrompt += "\n\n--- AGENCY KNOWLEDGE BASE ---\n";
+      systemPrompt += "The following entries have been provided by agency leadership. Follow these guidelines, apply this knowledge, and respect all directives.\n\n";
+      for (const entry of knowledge) {
+        systemPrompt += `[${entry.type.toUpperCase()}] ${entry.title}\n${entry.content}\n\n`;
+      }
+      systemPrompt += "--- END KNOWLEDGE BASE ---";
     }
 
     const response = await anthropic.messages.create({
