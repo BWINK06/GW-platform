@@ -1,8 +1,14 @@
+export type KnowledgeSource =
+  | { kind: "manual" }
+  | { kind: "file"; fileName: string; fileType: string }
+  | { kind: "url"; url: string };
+
 export interface KnowledgeEntry {
   id: string;
   title: string;
   content: string;
   type: "brand-guidelines" | "strategy" | "process" | "client-notes" | "directive";
+  source: KnowledgeSource;
   scope: {
     global: boolean;
     agentIds: string[];   // empty = all agents

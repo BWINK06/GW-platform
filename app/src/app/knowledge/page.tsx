@@ -8,6 +8,8 @@ import {
   Globe,
   BookOpen,
   Filter,
+  FileText,
+  Link2,
 } from "lucide-react";
 import {
   KnowledgeEntry,
@@ -215,6 +217,18 @@ export default function KnowledgePage() {
                             })
                           )}
                         </>
+                      )}
+                      {entry.source?.kind === "file" && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-50 text-purple-700">
+                          <FileText size={10} />
+                          {entry.source.fileName}
+                        </span>
+                      )}
+                      {entry.source?.kind === "url" && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-cyan-50 text-cyan-700 max-w-[200px] truncate">
+                          <Link2 size={10} className="shrink-0" />
+                          {entry.source.url}
+                        </span>
                       )}
                       <span className="text-xs text-muted ml-2">
                         Updated {new Date(entry.updatedAt).toLocaleDateString()}
