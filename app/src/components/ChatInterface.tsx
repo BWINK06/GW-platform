@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Loader2, Trash2 } from "lucide-react";
 import { ClientSelector } from "./ClientSelector";
 import { Client } from "@/lib/clients";
@@ -11,6 +11,33 @@ interface Message {
   content: string;
 }
 
+function storageKey(agentId: string, clientId: string | null): string {
+  return `gw-chat:${agentId}:${clientId || "general"}`;
+}
+
+function loadMessages(agentId: string, clientId: string | null): Message[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(storageKey(agentId, clientId));
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveMessages(agentId: string, clientId: string | null, messages: Message[]) {
+  if (typeof window === "undefined") return;
+  try {
+    if (messages.length === 0) {
+      localStorage.removeItem(storageKey(agentId, clientId));
+    } else {
+      localStorage.setItem(storageKey(agentId, clientId), JSON.stringify(messages));
+    }
+  } catch {
+    // localStorage full or unavailable — fail silently
+  }
+}
+
 export function ChatInterface({ agent }: { agent: Agent }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -18,6 +45,19 @@ export function ChatInterface({ agent }: { agent: Agent }) {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load history when agent or client changes
+  useEffect(() => {
+    setMessages(loadMessages(agent.id, selectedClient?.id || null));
+  }, [agent.id, selectedClient?.id]);
+
+  // Persist whenever messages change
+  const persistMessages = useCallback(
+    (msgs: Message[]) => {
+      saveMessages(agent.id, selectedClient?.id || null, msgs);
+    },
+    [agent.id, selectedClient?.id]
+  );
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -36,7 +76,9 @@ export function ChatInterface({ agent }: { agent: Agent }) {
     if (!input.trim() || loading) return;
 
     const userMessage: Message = { role: "user", content: input.trim() };
-    setMessages((prev) => [...prev, userMessage]);
+    const withUser = [...messages, userMessage];
+    setMessages(withUser);
+    persistMessages(withUser);
     setInput("");
     setLoading(true);
 
@@ -45,7 +87,7 @@ export function ChatInterface({ agent }: { agent: Agent }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, userMessage],
+          messages: withUser,
           agentId: agent.id,
           clientId: selectedClient?.id || null,
         }),
@@ -56,19 +98,20 @@ export function ChatInterface({ agent }: { agent: Agent }) {
       }
 
       const data = await response.json();
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: data.content },
-      ]);
+      const withAssistant = [...withUser, { role: "assistant" as const, content: data.content }];
+      setMessages(withAssistant);
+      persistMessages(withAssistant);
     } catch {
-      setMessages((prev) => [
-        ...prev,
+      const withError = [
+        ...withUser,
         {
-          role: "assistant",
+          role: "assistant" as const,
           content:
             "Sorry, I encountered an error. Please check that your API key is configured in `.env.local` and try again.",
         },
-      ]);
+      ];
+      setMessages(withError);
+      persistMessages(withError);
     } finally {
       setLoading(false);
     }
@@ -104,7 +147,10 @@ export function ChatInterface({ agent }: { agent: Agent }) {
           />
           {messages.length > 0 && (
             <button
-              onClick={() => setMessages([])}
+              onClick={() => {
+                setMessages([]);
+                persistMessages([]);
+              }}
               className="p-2 text-muted hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
               title="Clear conversation"
             >
